@@ -35,13 +35,12 @@ func testRegress(t *testing.T, testDir string) {
 		return
 	}
 
-	filename := filepath.Join(testDir, "test.go.in")
-	data, err := ioutil.ReadFile(filename)
+	filename := filepath.Join(testDir, "test.go")
+	data, err := ioutil.ReadFile(filename + ".in")
 	if err != nil {
 		t.Errorf("ReadFile failed: %v", err)
 		return
 	}
-
 	cursor := bytes.IndexByte(data, '@')
 	if cursor < 0 {
 		t.Errorf("Missing @")
@@ -49,7 +48,14 @@ func testRegress(t *testing.T, testDir string) {
 	}
 	data = append(data[:cursor], data[cursor+1:]...)
 
+	if err := ioutil.WriteFile(filename, data, 0775); err != nil {
+		t.Errorf("WriteFile failed: %v", err)
+		return
+	}
+	defer os.Remove(filename)
+
 	cfg := suggest.Config{
+		Logf:    t.Logf,
 		Context: &suggest.PackedContext{},
 	}
 	if testing.Verbose() {

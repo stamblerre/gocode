@@ -96,8 +96,8 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 		Env:        c.Context.Env,
 		BuildFlags: c.Context.BuildFlags,
 	}
-	pkgs, err := packages.Load(cfg, fmt.Sprintf("contains:%v", filename))
-	if err != nil || len(pkgs) <= 0 {
+	pkgs, _ := packages.Load(cfg, fmt.Sprintf("contains:%v", filename))
+	if len(pkgs) <= 0 { // ignore errors
 		return nil, token.NoPos, nil
 	}
 	pkg := pkgs[0]
