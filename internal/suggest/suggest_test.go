@@ -3,14 +3,13 @@ package suggest_test
 import (
 	"bytes"
 	"encoding/json"
-	"go/importer"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/mdempsky/gocode/internal/suggest"
+	"github.com/stamblerre/gocode/internal/suggest"
 )
 
 func TestRegress(t *testing.T) {
@@ -51,7 +50,7 @@ func testRegress(t *testing.T, testDir string) {
 	data = append(data[:cursor], data[cursor+1:]...)
 
 	cfg := suggest.Config{
-		Importer: importer.Default(),
+		Context: &suggest.PackedContext{},
 	}
 	if testing.Verbose() {
 		cfg.Logf = t.Logf

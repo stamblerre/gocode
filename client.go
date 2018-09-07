@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"go/build"
 	"io/ioutil"
 	"log"
 	"net/rpc"
@@ -14,8 +13,7 @@ import (
 
 	"runtime/debug"
 
-	"github.com/mdempsky/gocode/internal/gbimporter"
-	"github.com/mdempsky/gocode/internal/suggest"
+	"github.com/stamblerre/gocode/internal/suggest"
 )
 
 func doClient() {
@@ -126,7 +124,7 @@ func tryToConnect(network, address string) (*rpc.Client, error) {
 func cmdAutoComplete(c *rpc.Client) {
 	var req AutoCompleteRequest
 	req.Filename, req.Data, req.Cursor = prepareFilenameDataCursor()
-	req.Context = gbimporter.PackContext(&build.Default)
+	req.Context = &suggest.PackedContext{}
 	req.Source = *g_source
 	req.Builtin = *g_builtin
 

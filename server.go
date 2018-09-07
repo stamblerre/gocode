@@ -3,8 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"go/importer"
-	"go/types"
 	"log"
 	"net"
 	"net/rpc"
@@ -13,8 +11,7 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/mdempsky/gocode/internal/gbimporter"
-	"github.com/mdempsky/gocode/internal/suggest"
+	"github.com/stamblerre/gocode/internal/suggest"
 )
 
 func doServer() {
@@ -52,10 +49,10 @@ type Server struct {
 }
 
 type AutoCompleteRequest struct {
+	Context  *suggest.PackedContext
 	Filename string
 	Data     []byte
 	Cursor   int
-	Context  gbimporter.PackedContext
 	Source   bool
 	Builtin  bool
 }
@@ -88,15 +85,12 @@ func (s *Server) AutoComplete(req *AutoCompleteRequest, res *AutoCompleteReply) 
 		log.Println("-------------------------------------------------------")
 	}
 	now := time.Now()
-	var underlying types.ImporterFrom
 	if req.Source {
-		underlying = importer.For("source", nil).(types.ImporterFrom)
-	} else {
-		underlying = importer.Default().(types.ImporterFrom)
+		return fmt.Errorf("don't support source right now")
 	}
 	cfg := suggest.Config{
-		Importer: gbimporter.New(&req.Context, req.Filename, underlying),
-		Builtin:  req.Builtin,
+		Builtin: req.Builtin,
+		Context: req.Context,
 	}
 	if *g_debug {
 		cfg.Logf = log.Printf

@@ -1,7 +1,7 @@
 package suggest
 
 import (
-	"bytes"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/scanner"
@@ -11,13 +11,31 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mdempsky/gocode/internal/lookdot"
+	"github.com/stamblerre/gocode/internal/lookdot"
+	"golang.org/x/tools/go/packages"
 )
 
 type Config struct {
-	Importer types.Importer
-	Logf     func(fmt string, args ...interface{})
-	Builtin  bool
+	Logf    func(fmt string, args ...interface{})
+	Context *PackedContext
+	Builtin bool
+}
+
+// Copied from go/packages.
+type PackedContext struct {
+	// Env is the environment to use when invoking the build system's query tool.
+	// If Env is nil, the current environment is used.
+	// As in os/exec's Cmd, only the last value in the slice for
+	// each environment key is used. To specify the setting of only
+	// a few variables, append to the current environment, as in:
+	//
+	//	opt.Env = append(os.Environ(), "GOOS=plan9", "GOARCH=386")
+	//
+	Env []string
+
+	// BuildFlags is a list of command-line flags to be passed through to
+	// the build system's query tool.
+	BuildFlags []string
 }
 
 // Suggest returns a list of suggestion candidates and the length of
@@ -78,49 +96,31 @@ func (c *Config) Suggest(filename string, data []byte, cursor int) ([]Candidate,
 }
 
 func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*token.FileSet, token.Pos, *types.Package) {
-	// If we're in trailing white space at the end of a scope,
-	// sometimes go/types doesn't recognize that variables should
-	// still be in scope there.
-	filesemi := bytes.Join([][]byte{data[:cursor], []byte(";"), data[cursor:]}, nil)
+	cfg := &packages.Config{
+		Mode:       packages.LoadAllSyntax,
+		Env:        c.Context.Env,
+		BuildFlags: c.Context.BuildFlags,
+	}
+	pkgs, err := packages.Load(cfg, fmt.Sprintf("contains:%v", filename))
+	if err != nil || len(pkgs) <= 0 {
+		return nil, token.NoPos, nil
+	}
+	pkg := pkgs[0]
 
-	fset := token.NewFileSet()
-	fileAST, err := parser.ParseFile(fset, filename, filesemi, parser.AllErrors)
-	if err != nil {
-		c.logParseError("Error parsing input file (outer block)", err)
+	var fileAST *ast.File
+	for _, file := range pkg.Syntax {
+		name := pkg.Fset.Position(file.Pos()).Filename
+		if name == filename {
+			fileAST = file
+		}
 	}
 	astPos := fileAST.Pos()
 	if astPos == 0 {
 		return nil, token.NoPos, nil
 	}
-	pos := fset.File(astPos).Pos(cursor)
+	pos := pkg.Fset.File(astPos).Pos(cursor)
 
-	files := []*ast.File{fileAST}
-	for _, otherName := range c.findOtherPackageFiles(filename, fileAST.Name.Name) {
-		ast, err := parser.ParseFile(fset, otherName, nil, 0)
-		if err != nil {
-			c.logParseError("Error parsing other file", err)
-		}
-		files = append(files, ast)
-	}
-
-	// Clear any function bodies other than where the cursor
-	// is. They're not relevant to suggestions and only slow down
-	// typechecking.
-	for _, file := range files {
-		for _, decl := range file.Decls {
-			if fd, ok := decl.(*ast.FuncDecl); ok && (pos < fd.Pos() || pos >= fd.End()) {
-				fd.Body = nil
-			}
-		}
-	}
-
-	cfg := types.Config{
-		Importer: c.Importer,
-		Error:    func(err error) {},
-	}
-	pkg, _ := cfg.Check("", fset, files, nil)
-
-	return fset, pos, pkg
+	return pkg.Fset, pos, pkg.Types
 }
 
 func (c *Config) fieldNameCandidates(typ types.Type, b *candidateCollector) {
