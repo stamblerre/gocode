@@ -3,13 +3,8 @@ package suggest
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
-	"go/scanner"
 	"go/token"
 	"go/types"
-	"io/ioutil"
-	"path/filepath"
-	"strings"
 
 	"github.com/stamblerre/gocode/internal/lookdot"
 	"golang.org/x/tools/go/packages"
@@ -97,7 +92,7 @@ func (c *Config) Suggest(filename string, data []byte, cursor int) ([]Candidate,
 
 func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*token.FileSet, token.Pos, *types.Package) {
 	cfg := &packages.Config{
-		Mode:       packages.LoadAllSyntax,
+		Mode:       packages.LoadSyntax,
 		Env:        c.Context.Env,
 		BuildFlags: c.Context.BuildFlags,
 	}
@@ -149,59 +144,4 @@ func (c *Config) scopeCandidates(scope *types.Scope, pos token.Pos, b *candidate
 		}
 		scope = scope.Parent()
 	}
-}
-
-func (c *Config) logParseError(intro string, err error) {
-	if c.Logf == nil {
-		return
-	}
-	if el, ok := err.(scanner.ErrorList); ok {
-		c.Logf("%s:", intro)
-		for _, er := range el {
-			c.Logf(" %s", er)
-		}
-	} else {
-		c.Logf("%s: %s", intro, err)
-	}
-}
-
-func (c *Config) findOtherPackageFiles(filename, pkgName string) []string {
-	if filename == "" {
-		return nil
-	}
-
-	dir, file := filepath.Split(filename)
-	dents, err := ioutil.ReadDir(dir)
-	if err != nil {
-		panic(err)
-	}
-	isTestFile := strings.HasSuffix(file, "_test.go")
-
-	// TODO(mdempsky): Use go/build.(*Context).MatchFile or
-	// something to properly handle build tags?
-	var out []string
-	for _, dent := range dents {
-		name := dent.Name()
-		if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") {
-			continue
-		}
-		if name == file || !strings.HasSuffix(name, ".go") {
-			continue
-		}
-		if !isTestFile && strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-
-		abspath := filepath.Join(dir, name)
-		if pkgNameFor(abspath) == pkgName {
-			out = append(out, abspath)
-		}
-	}
-
-	return out
-}
-
-func pkgNameFor(filename string) string {
-	file, _ := parser.ParseFile(token.NewFileSet(), filename, nil, parser.PackageClauseOnly)
-	return file.Name.Name
 }
