@@ -8,7 +8,7 @@ import (
 	"go/token"
 	"go/types"
 
-	"github.com/stamblerre/gocode/internal/lookdot"
+	"github.com/mdempsky/gocode/internal/lookdot"
 	"golang.org/x/tools/go/packages"
 )
 

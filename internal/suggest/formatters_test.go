@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/stamblerre/gocode/internal/suggest"
+	"github.com/mdempsky/gocode/internal/suggest"
 )
 
 func TestFormatters(t *testing.T) {
