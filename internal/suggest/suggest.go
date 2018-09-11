@@ -1,8 +1,10 @@
 package suggest
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"go/types"
 
@@ -91,29 +93,47 @@ func (c *Config) Suggest(filename string, data []byte, cursor int) ([]Candidate,
 }
 
 func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*token.FileSet, token.Pos, *types.Package) {
+	var pos token.Pos
+
 	cfg := &packages.Config{
 		Mode:       packages.LoadSyntax,
 		Env:        c.Context.Env,
 		BuildFlags: c.Context.BuildFlags,
+		ParseFile: func(fset *token.FileSet, parseFilename string) (*ast.File, error) {
+			var src interface{}
+			mode := parser.DeclarationErrors
+			if filename == parseFilename {
+				// If we're in trailing white space at the end of a scope,
+				// sometimes go/types doesn't recognize that variables should
+				// still be in scope there.
+				src = bytes.Join([][]byte{data[:cursor], []byte(";"), data[cursor:]}, nil)
+				mode = parser.AllErrors
+			}
+			file, err := parser.ParseFile(fset, parseFilename, src, mode)
+			if file == nil {
+				return nil, err
+			}
+			if filename == parseFilename {
+				pos = fset.File(file.Pos()).Pos(cursor)
+				if pos == token.NoPos {
+					return nil, fmt.Errorf("no position for cursor in %s", parseFilename)
+				}
+			}
+			for _, decl := range file.Decls {
+				if fd, ok := decl.(*ast.FuncDecl); ok {
+					if pos == token.NoPos || (pos < fd.Pos() || pos >= fd.End()) {
+						fd.Body = nil
+					}
+				}
+			}
+			return file, nil
+		},
 	}
 	pkgs, _ := packages.Load(cfg, fmt.Sprintf("contains:%v", filename))
 	if len(pkgs) <= 0 { // ignore errors
 		return nil, token.NoPos, nil
 	}
 	pkg := pkgs[0]
-
-	var fileAST *ast.File
-	for _, file := range pkg.Syntax {
-		name := pkg.Fset.Position(file.Pos()).Filename
-		if name == filename {
-			fileAST = file
-		}
-	}
-	astPos := fileAST.Pos()
-	if astPos == 0 {
-		return nil, token.NoPos, nil
-	}
-	pos := pkg.Fset.File(astPos).Pos(cursor)
 
 	return pkg.Fset, pos, pkg.Types
 }

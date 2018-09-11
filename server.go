@@ -53,7 +53,6 @@ type AutoCompleteRequest struct {
 	Filename string
 	Data     []byte
 	Cursor   int
-	Source   bool
 	Builtin  bool
 }
 
@@ -85,9 +84,6 @@ func (s *Server) AutoComplete(req *AutoCompleteRequest, res *AutoCompleteReply) 
 		log.Println("-------------------------------------------------------")
 	}
 	now := time.Now()
-	if req.Source {
-		return fmt.Errorf("don't support source right now")
-	}
 	cfg := suggest.Config{
 		Builtin: req.Builtin,
 		Context: req.Context,

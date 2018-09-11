@@ -124,8 +124,9 @@ func tryToConnect(network, address string) (*rpc.Client, error) {
 func cmdAutoComplete(c *rpc.Client) {
 	var req AutoCompleteRequest
 	req.Filename, req.Data, req.Cursor = prepareFilenameDataCursor()
+	// TODO(rstambler): Client can specify GOOS, GOARCH, etc.
+	// For now, assume same environment for server and client.
 	req.Context = &suggest.PackedContext{}
-	req.Source = *g_source
 	req.Builtin = *g_builtin
 
 	var res AutoCompleteReply
