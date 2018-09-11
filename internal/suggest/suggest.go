@@ -30,6 +30,11 @@ type PackedContext struct {
 	//
 	Env []string
 
+	// Dir is the directory in which to run the build system's query tool
+	// that provides information about the packages.
+	// If Dir is empty, the tool is run in the current directory.
+	Dir string
+
 	// BuildFlags is a list of command-line flags to be passed through to
 	// the build system's query tool.
 	BuildFlags []string
@@ -98,6 +103,7 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 	cfg := &packages.Config{
 		Mode:       packages.LoadSyntax,
 		Env:        c.Context.Env,
+		Dir:        c.Context.Dir,
 		BuildFlags: c.Context.BuildFlags,
 		ParseFile: func(fset *token.FileSet, parseFilename string) (*ast.File, error) {
 			var src interface{}
