@@ -118,6 +118,7 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 		Env:        c.Context.Env,
 		Dir:        c.Context.Dir,
 		BuildFlags: c.Context.BuildFlags,
+		Tests:      true,
 		ParseFile: func(fset *token.FileSet, parseFilename string) (*ast.File, error) {
 			var src interface{}
 			mode := parser.DeclarationErrors
