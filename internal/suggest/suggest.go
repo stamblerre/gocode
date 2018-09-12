@@ -7,6 +7,7 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
+	"os"
 
 	"github.com/mdempsky/gocode/internal/lookdot"
 	"golang.org/x/tools/go/packages"
@@ -97,6 +98,18 @@ func (c *Config) Suggest(filename string, data []byte, cursor int) ([]Candidate,
 	return res, len(partial)
 }
 
+func sameFile(filename1, filename2 string) bool {
+	finfo1, err := os.Stat(filename1)
+	if err != nil {
+		return false
+	}
+	finfo2, err := os.Stat(filename2)
+	if err != nil {
+		return false
+	}
+	return os.SameFile(finfo1, finfo2)
+}
+
 func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*token.FileSet, token.Pos, *types.Package) {
 	var pos token.Pos
 
@@ -108,7 +121,7 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 		ParseFile: func(fset *token.FileSet, parseFilename string) (*ast.File, error) {
 			var src interface{}
 			mode := parser.DeclarationErrors
-			if filename == parseFilename {
+			if sameFile(filename, parseFilename) {
 				// If we're in trailing white space at the end of a scope,
 				// sometimes go/types doesn't recognize that variables should
 				// still be in scope there.
@@ -119,7 +132,7 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 			if file == nil {
 				return nil, err
 			}
-			if filename == parseFilename {
+			if sameFile(filename, parseFilename) {
 				pos = fset.File(file.Pos()).Pos(cursor)
 				if pos == token.NoPos {
 					return nil, fmt.Errorf("no position for cursor in %s", parseFilename)
