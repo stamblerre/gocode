@@ -92,6 +92,9 @@ func (s *Server) AutoComplete(req *AutoCompleteRequest, res *AutoCompleteReply) 
 		cfg.Logf = log.Printf
 	}
 	candidates, d := cfg.Suggest(req.Filename, req.Data, req.Cursor)
+	if candidates == nil {
+		candidates = []suggest.Candidate{}
+	}
 	elapsed := time.Since(now)
 	if *g_debug {
 		log.Printf("Elapsed duration: %v\n", elapsed)
