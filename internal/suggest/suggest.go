@@ -9,7 +9,7 @@ import (
 	"go/types"
 	"os"
 
-	"github.com/mdempsky/gocode/internal/lookdot"
+	"github.com/stamblerre/gocode/internal/lookdot"
 	"golang.org/x/tools/go/packages"
 )
 

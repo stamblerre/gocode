@@ -13,7 +13,7 @@ import (
 
 	"runtime/debug"
 
-	"github.com/mdempsky/gocode/internal/suggest"
+	"github.com/stamblerre/gocode/internal/suggest"
 )
 
 func doClient() {
