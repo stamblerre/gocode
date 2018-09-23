@@ -23,7 +23,8 @@ func getSocketPath() string {
 	if user == "" {
 		user = "all"
 	}
-	return filepath.Join(os.TempDir(), fmt.Sprintf("gocode-daemon.%s", user))
+	program := filepath.Base(os.Args[0])
+	return filepath.Join(os.TempDir(), fmt.Sprintf("%s-daemon.%s", program, user))
 }
 
 func usage() {
