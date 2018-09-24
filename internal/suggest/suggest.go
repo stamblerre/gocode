@@ -153,7 +153,7 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 	if len(pkgs) <= 0 { // ignore errors
 		return nil, token.NoPos, nil
 	}
-	pkg := pkgs[0]
+	pkg := pkgs[len(pkgs)-1]
 
 	return pkg.Fset, pos, pkg.Types
 }
