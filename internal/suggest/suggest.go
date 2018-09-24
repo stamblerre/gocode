@@ -8,6 +8,7 @@ import (
 	"go/token"
 	"go/types"
 	"os"
+	"sync"
 
 	"github.com/stamblerre/gocode/internal/lookdot"
 	"golang.org/x/tools/go/packages"
@@ -112,6 +113,7 @@ func sameFile(filename1, filename2 string) bool {
 
 func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*token.FileSet, token.Pos, *types.Package) {
 	var pos token.Pos
+	var posMu sync.Mutex // guards pos in ParseFile
 
 	cfg := &packages.Config{
 		Mode:       packages.LoadSyntax,
@@ -121,6 +123,7 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 		Tests:      true,
 		ParseFile: func(fset *token.FileSet, parseFilename string) (*ast.File, error) {
 			var src interface{}
+			var filePos token.Pos
 			mode := parser.DeclarationErrors
 			if sameFile(filename, parseFilename) {
 				// If we're in trailing white space at the end of a scope,
@@ -134,14 +137,19 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 				return nil, err
 			}
 			if sameFile(filename, parseFilename) {
-				pos = fset.File(file.Pos()).Pos(cursor)
-				if pos == token.NoPos {
+				filePos = fset.File(file.Pos()).Pos(cursor)
+				if filePos == token.NoPos {
 					return nil, fmt.Errorf("no position for cursor in %s", parseFilename)
 				}
+				posMu.Lock()
+				if pos == token.NoPos {
+					pos = filePos
+				}
+				posMu.Unlock()
 			}
 			for _, decl := range file.Decls {
 				if fd, ok := decl.(*ast.FuncDecl); ok {
-					if pos == token.NoPos || (pos < fd.Pos() || pos >= fd.End()) {
+					if filePos == token.NoPos || (filePos < fd.Pos() || filePos >= fd.End()) {
 						fd.Body = nil
 					}
 				}
@@ -153,7 +161,7 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 	if len(pkgs) <= 0 { // ignore errors
 		return nil, token.NoPos, nil
 	}
-	pkg := pkgs[len(pkgs)-1]
+	pkg := pkgs[0]
 
 	return pkg.Fset, pos, pkg.Types
 }
