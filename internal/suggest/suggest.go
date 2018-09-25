@@ -8,6 +8,7 @@ import (
 	"go/token"
 	"go/types"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/stamblerre/gocode/internal/lookdot"
@@ -112,6 +113,14 @@ func sameFile(filename1, filename2 string) bool {
 }
 
 func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*token.FileSet, token.Pos, *types.Package) {
+	var tags string
+	parsed, _ := parser.ParseFile(token.NewFileSet(), filename, data, parser.ParseComments)
+	if parsed != nil && len(parsed.Comments) > 0 {
+		buildTagText := parsed.Comments[0].Text()
+		tags = strings.TrimPrefix(buildTagText, "+build ")
+		tags = fmt.Sprintf("-tags=%s", tags)
+	}
+
 	var pos token.Pos
 	var posMu sync.Mutex // guards pos in ParseFile
 
@@ -119,7 +128,7 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 		Mode:       packages.LoadSyntax,
 		Env:        c.Context.Env,
 		Dir:        c.Context.Dir,
-		BuildFlags: c.Context.BuildFlags,
+		BuildFlags: append(c.Context.BuildFlags, tags),
 		Tests:      true,
 		ParseFile: func(fset *token.FileSet, parseFilename string) (*ast.File, error) {
 			var src interface{}
