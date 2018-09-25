@@ -8,6 +8,7 @@ import (
 	"go/token"
 	"go/types"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -117,8 +118,12 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 	parsed, _ := parser.ParseFile(token.NewFileSet(), filename, data, parser.ParseComments)
 	if parsed != nil && len(parsed.Comments) > 0 {
 		buildTagText := parsed.Comments[0].Text()
-		tags = strings.TrimPrefix(buildTagText, "+build ")
-		tags = fmt.Sprintf("-tags=%s", tags)
+		if strings.HasPrefix(buildTagText, "+build ") {
+			tags = strings.TrimPrefix(buildTagText, "+build ")
+		}
+	}
+	if suffix := buildConstraint(filename); suffix != "" {
+		tags = suffix
 	}
 
 	var pos token.Pos
@@ -128,7 +133,7 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 		Mode:       packages.LoadSyntax,
 		Env:        c.Context.Env,
 		Dir:        c.Context.Dir,
-		BuildFlags: append(c.Context.BuildFlags, tags),
+		BuildFlags: append(c.Context.BuildFlags, fmt.Sprintf("-tags=%s", tags)),
 		Tests:      true,
 		ParseFile: func(fset *token.FileSet, parseFilename string) (*ast.File, error) {
 			var src interface{}
@@ -201,4 +206,82 @@ func (c *Config) scopeCandidates(scope *types.Scope, pos token.Pos, b *candidate
 		}
 		scope = scope.Parent()
 	}
+}
+
+// The constants and functions below were adapted from go/build.
+
+const (
+	GoosList   = "android darwin dragonfly freebsd js linux nacl netbsd openbsd plan9 solaris windows zos "
+	GoarchList = "386 amd64 amd64p32 arm armbe arm64 arm64be ppc64 ppc64le mips mipsle mips64 mips64le mips64p32 mips64p32le ppc riscv riscv64 s390 s390x sparc sparc64 wasm "
+)
+
+var (
+	KnownOS   = make(map[string]bool)
+	KnownArch = make(map[string]bool)
+)
+
+// buildConstraint determines whether the file with the given name has
+// build constraints. If it does, it returns the {$GOOS}_{$GOARCH}
+// for the file, if it does have build constraints.
+// It as an adapted version of the matchFile function from go/build.
+func buildConstraint(filename string) (suffix string) {
+	name := filepath.Base(filename)
+	if strings.HasPrefix(name, "_") || strings.HasPrefix(name, ".") {
+		return ""
+	}
+	i := strings.LastIndex(name, ".")
+	if i < 0 {
+		i = len(name)
+	}
+	os, arch, ok := goodOSArchFile(name)
+	if !ok {
+		return ""
+	}
+	if os == "" {
+		return arch
+	} else if arch == "" {
+		return os
+	}
+	return os + "_" + arch
+}
+
+// goodOSArchFile returns the $GOOS and $GOARCH for a given filename,
+// if they match accepted OSes and architectures.
+// The recognized name formats are:
+//
+//     name_$(GOOS).*
+//     name_$(GOARCH).*
+//     name_$(GOOS)_$(GOARCH).*
+//     name_$(GOOS)_test.*
+//     name_$(GOARCH)_test.*
+//     name_$(GOOS)_$(GOARCH)_test.*
+//
+// An exception: if GOOS=android, then files with GOOS=linux are also matched.
+// This function is adapted from go/build.
+func goodOSArchFile(name string) (os, arch string, match bool) {
+	if dot := strings.Index(name, "."); dot != -1 {
+		name = name[:dot]
+	}
+	// Cut everything in the name before the initial _.
+	i := strings.Index(name, "_")
+	if i < 0 {
+		return "", "", false
+	}
+	name = name[i:] // ignore everything before first _
+
+	l := strings.Split(name, "_")
+	if n := len(l); n > 0 && l[n-1] == "test" {
+		l = l[:n-1]
+	}
+	n := len(l)
+	if n >= 2 && KnownOS[l[n-2]] && KnownArch[l[n-1]] {
+		return l[n-2], l[n-1], true
+	}
+	if n >= 1 && KnownOS[l[n-1]] {
+		return l[n-1], "", true
+	}
+	if n >= 1 && KnownArch[l[n-1]] {
+		return "", l[n-1], true
+	}
+	return "", "", false
 }

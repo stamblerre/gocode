@@ -9,12 +9,20 @@ import (
 	"os"
 	"os/signal"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/stamblerre/gocode/internal/suggest"
 )
 
 func doServer() {
+	for _, v := range strings.Fields(suggest.GoosList) {
+		suggest.KnownOS[v] = true
+	}
+	for _, v := range strings.Fields(suggest.GoarchList) {
+		suggest.KnownArch[v] = true
+	}
+
 	addr := *g_addr
 	if *g_sock == "unix" {
 		addr = getSocketPath()
