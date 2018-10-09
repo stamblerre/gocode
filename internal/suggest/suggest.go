@@ -135,8 +135,7 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 		Dir:        c.Context.Dir,
 		BuildFlags: append(c.Context.BuildFlags, fmt.Sprintf("-tags=%s", tags)),
 		Tests:      true,
-		ParseFile: func(fset *token.FileSet, parseFilename string) (*ast.File, error) {
-			var src interface{}
+		ParseFile: func(fset *token.FileSet, parseFilename string, src []byte) (*ast.File, error) {
 			var filePos token.Pos
 			mode := parser.DeclarationErrors
 			if sameFile(filename, parseFilename) {
