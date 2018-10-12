@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -19,6 +20,11 @@ func TestRegress(t *testing.T) {
 	}
 
 	for _, testDir := range testDirs {
+		// Skip test.0011 for Go <= 1.11 because a method was added to reflect.Value.
+		// TODO(rstambler): Change this when Go 1.12 comes out.
+		if !strings.HasPrefix(runtime.Version(), "devel") && strings.HasSuffix(testDir, "test.0011") {
+				continue
+		}
 		testDir := testDir // capture
 		name := strings.TrimPrefix(testDir, "testdata/")
 		t.Run(name, func(t *testing.T) {
@@ -80,4 +86,13 @@ func testRegress(t *testing.T, testDir string) {
 		t.Errorf("%s:\nGot:\n%s\nWant:\n%s\n", testDir, got, want)
 		return
 	}
+}
+
+func contains(haystack []string, needle string) bool {
+	for _, x := range haystack {
+		if needle == x {
+			return true
+		}
+	}
+	return false
 }

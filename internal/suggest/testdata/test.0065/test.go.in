@@ -1,7 +1,8 @@
 package p
 
-import "errors"
+import (
+	"fmt"
+	banana "io"
+)
 
-func f() {
-	errors.@
-}
+var _ = fmt.@

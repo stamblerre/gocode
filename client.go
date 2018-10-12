@@ -128,6 +128,7 @@ func cmdAutoComplete(c *rpc.Client) {
 	// For now, assume same environment for server and client.
 	req.Context = &suggest.PackedContext{}
 	req.Builtin = *g_builtin
+	req.IgnoreCase = *g_ignore_case
 
 	var res AutoCompleteReply
 	var err error

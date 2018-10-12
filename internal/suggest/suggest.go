@@ -8,6 +8,7 @@ import (
 	"go/token"
 	"go/types"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/stamblerre/gocode/internal/lookdot"
@@ -15,9 +16,10 @@ import (
 )
 
 type Config struct {
-	Logf    func(fmt string, args ...interface{})
-	Context *PackedContext
-	Builtin bool
+	Logf       func(fmt string, args ...interface{})
+	Context    *PackedContext
+	Builtin    bool
+	IgnoreCase bool
 }
 
 // Copied from go/packages.
@@ -49,7 +51,7 @@ func (c *Config) Suggest(filename string, data []byte, cursor int) ([]Candidate,
 		return nil, 0
 	}
 
-	fset, pos, pkg := c.analyzePackage(filename, data, cursor)
+	fset, pos, pkg, imports := c.analyzePackage(filename, data, cursor)
 	if pkg == nil {
 		return nil, 0
 	}
@@ -57,10 +59,12 @@ func (c *Config) Suggest(filename string, data []byte, cursor int) ([]Candidate,
 
 	ctx, expr, partial := deduceCursorContext(data, cursor)
 	b := candidateCollector{
-		localpkg: pkg,
-		partial:  partial,
-		filter:   objectFilters[partial],
-		builtin:  ctx != selectContext && c.Builtin,
+		localpkg:   pkg,
+		imports:    imports,
+		partial:    partial,
+		filter:     objectFilters[partial],
+		builtin:    ctx != selectContext && c.Builtin,
+		ignoreCase: c.IgnoreCase,
 	}
 
 	switch ctx {
@@ -99,19 +103,20 @@ func (c *Config) Suggest(filename string, data []byte, cursor int) ([]Candidate,
 	return res, len(partial)
 }
 
-func sameFile(filename1, filename2 string) bool {
-	finfo1, err := os.Stat(filename1)
-	if err != nil {
-		return false
+func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*token.FileSet, token.Pos, *types.Package, []*ast.ImportSpec) {
+	var tags string
+	parsed, _ := parser.ParseFile(token.NewFileSet(), filename, data, parser.ParseComments)
+	if parsed != nil && len(parsed.Comments) > 0 {
+		buildTagText := parsed.Comments[0].Text()
+		if strings.HasPrefix(buildTagText, "+build ") {
+			tags = strings.TrimPrefix(buildTagText, "+build ")
+		}
 	}
-	finfo2, err := os.Stat(filename2)
-	if err != nil {
-		return false
+	if suffix := buildConstraint(filename); suffix != "" {
+		tags = suffix
 	}
-	return os.SameFile(finfo1, finfo2)
-}
 
-func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*token.FileSet, token.Pos, *types.Package) {
+	var fileAST *ast.File
 	var pos token.Pos
 	var posMu sync.Mutex // guards pos in ParseFile
 
@@ -119,9 +124,9 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 		Mode:       packages.LoadSyntax,
 		Env:        c.Context.Env,
 		Dir:        c.Context.Dir,
-		BuildFlags: c.Context.BuildFlags,
+		BuildFlags: append(c.Context.BuildFlags, fmt.Sprintf("-tags=%s", tags)),
 		Tests:      true,
-		ParseFile: func(fset *token.FileSet, parseFilename string) (*ast.File, error) {
+		ParseFile: func(fset *token.FileSet, parseFilename string, _ []byte) (*ast.File, error) {
 			var src interface{}
 			var filePos token.Pos
 			mode := parser.DeclarationErrors
@@ -137,6 +142,7 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 				return nil, err
 			}
 			if sameFile(filename, parseFilename) {
+				fileAST = file
 				filePos = fset.File(file.Pos()).Pos(cursor)
 				if filePos == token.NoPos {
 					return nil, fmt.Errorf("no position for cursor in %s", parseFilename)
@@ -159,11 +165,23 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 	}
 	pkgs, _ := packages.Load(cfg, fmt.Sprintf("contains:%v", filename))
 	if len(pkgs) <= 0 { // ignore errors
-		return nil, token.NoPos, nil
+		return nil, token.NoPos, nil, nil
 	}
 	pkg := pkgs[0]
 
-	return pkg.Fset, pos, pkg.Types
+	return pkg.Fset, pos, pkg.Types, fileAST.Imports
+}
+
+func sameFile(filename1, filename2 string) bool {
+	finfo1, err := os.Stat(filename1)
+	if err != nil {
+		return false
+	}
+	finfo2, err := os.Stat(filename2)
+	if err != nil {
+		return false
+	}
+	return os.SameFile(finfo1, finfo2)
 }
 
 func (c *Config) fieldNameCandidates(typ types.Type, b *candidateCollector) {

@@ -49,11 +49,13 @@ type Server struct {
 }
 
 type AutoCompleteRequest struct {
-	Context  *suggest.PackedContext
-	Filename string
-	Data     []byte
-	Cursor   int
-	Builtin  bool
+	Filename   string
+	Data       []byte
+	Cursor     int
+	Context    gbimporter.PackedContext
+	Source     bool
+	Builtin    bool
+	IgnoreCase bool
 }
 
 type AutoCompleteReply struct {
@@ -85,8 +87,9 @@ func (s *Server) AutoComplete(req *AutoCompleteRequest, res *AutoCompleteReply) 
 	}
 	now := time.Now()
 	cfg := suggest.Config{
-		Builtin: req.Builtin,
-		Context: req.Context,
+		Importer:   gbimporter.New(&req.Context, req.Filename, underlying),
+		Builtin:    req.Builtin,
+		IgnoreCase: req.IgnoreCase,
 	}
 	if *g_debug {
 		cfg.Logf = log.Printf
