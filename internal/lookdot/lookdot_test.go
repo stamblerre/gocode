@@ -2,6 +2,7 @@ package lookdot_test
 
 import (
 	"go/ast"
+	"go/build"
 	"go/importer"
 	"go/parser"
 	"go/token"
@@ -54,7 +55,7 @@ type B2 struct { b int; B1 }
 var loc time.Location
 `
 
-var tests = [...]struct {
+var tests = []struct {
 	lhs  string
 	want []string
 }{
@@ -62,7 +63,6 @@ var tests = [...]struct {
 	{"*S", []string{"Sv", "Sp"}},
 	{"S{}", []string{"Sv", "x", "y"}},
 	{"s", []string{"Sv", "Sp", "x", "y"}},
-	{"q", []string{"Z"}},
 
 	{"I", []string{"f", "g"}},
 	{"I(nil)", []string{"f", "g"}},
@@ -107,6 +107,14 @@ func TestWalk(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Add a test case for Go 1.11.
+	if contains(build.Default.ReleaseTags, "go1.11") {
+		tests = append(tests, struct {
+			lhs  string
+			want []string
+		}{"q", []string{"Z"}})
+	}
+
 	for _, test := range tests {
 		tv, err := types.Eval(fset, pkg, token.NoPos, test.lhs)
 		if err != nil {
@@ -136,4 +144,13 @@ func TestWalk(t *testing.T) {
 			continue
 		}
 	}
+}
+
+func contains(haystack []string, needle string) bool {
+	for _, item := range haystack {
+		if item == needle {
+			return true
+		}
+	}
+	return false
 }
