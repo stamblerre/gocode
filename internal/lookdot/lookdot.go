@@ -74,7 +74,10 @@ func walk(typ0 types.Type, addable0, value bool, v Visitor) {
 			for _, t := range next {
 				nt := namedOf(t.typ)
 				if nt == nil {
-					panic("embedded struct field without name?")
+					if _, ok := t.typ.(*types.Basic); ok {
+						continue
+					}
+					panic("panic: embedded struct field without name?")
 				}
 				if !visited[nt] {
 					cur = append(cur, t)

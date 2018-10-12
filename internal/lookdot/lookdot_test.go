@@ -23,6 +23,9 @@ func (S) Sv()
 func (*S) Sp()
 var s S
 
+type Q struct { Z }
+var q Q
+
 type I interface { f(); g() }
 
 type P *S
@@ -59,6 +62,7 @@ var tests = [...]struct {
 	{"*S", []string{"Sv", "Sp"}},
 	{"S{}", []string{"Sv", "x", "y"}},
 	{"s", []string{"Sv", "Sp", "x", "y"}},
+	{"q", []string{"Z"}},
 
 	{"I", []string{"f", "g"}},
 	{"I(nil)", []string{"f", "g"}},
@@ -90,14 +94,16 @@ var tests = [...]struct {
 func TestWalk(t *testing.T) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "src.go", src, 0)
-	if err != nil {
+	if file == nil {
 		t.Fatal(err)
 	}
 
-	var cfg types.Config
-	cfg.Importer = importer.Default()
+	cfg := types.Config{
+		Importer: importer.Default(),
+		Error:    func(error) {},
+	}
 	pkg, err := cfg.Check("p", fset, []*ast.File{file}, nil)
-	if err != nil {
+	if pkg == nil {
 		t.Fatal(err)
 	}
 
