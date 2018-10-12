@@ -60,7 +60,7 @@ type AutoCompleteRequest struct {
 	Filename   string
 	Data       []byte
 	Cursor     int
-	Context    gbimporter.PackedContext
+	Context    *suggest.PackedContext
 	Source     bool
 	Builtin    bool
 	IgnoreCase bool
@@ -95,7 +95,6 @@ func (s *Server) AutoComplete(req *AutoCompleteRequest, res *AutoCompleteReply) 
 	}
 	now := time.Now()
 	cfg := suggest.Config{
-		Importer:   gbimporter.New(&req.Context, req.Filename, underlying),
 		Builtin:    req.Builtin,
 		IgnoreCase: req.IgnoreCase,
 	}
