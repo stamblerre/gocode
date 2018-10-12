@@ -1,8 +1,8 @@
 package main
 
-import "reflect"
+import "fmt"
 
 func main() {
-	var test reflect.Value
+	var test fmt.Stringer
 	test.@
 }

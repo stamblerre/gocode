@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/mdempsky/gocode.svg?branch=master)](https://travis-ci.org/mdempsky/gocode)
+[![Build Status](https://travis-ci.org/stamblerre/gocode.svg?branch=master)](https://travis-ci.org/stamblerre/gocode)
 
 ## An autocompletion daemon for the Go programming language
 
