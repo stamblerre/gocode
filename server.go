@@ -95,6 +95,7 @@ func (s *Server) AutoComplete(req *AutoCompleteRequest, res *AutoCompleteReply) 
 	}
 	now := time.Now()
 	cfg := suggest.Config{
+		Context:    req.Context,
 		Builtin:    req.Builtin,
 		IgnoreCase: req.IgnoreCase,
 	}
