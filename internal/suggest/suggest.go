@@ -164,7 +164,7 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 			return file, nil
 		},
 	}
-	pkgs, _ := packages.Load(cfg, fmt.Sprintf("contains:%v", filename))
+	pkgs, _ := packages.Load(cfg, fmt.Sprintf("file=%v", filename))
 	if len(pkgs) <= 0 { // ignore errors
 		return nil, token.NoPos, nil, nil
 	}
