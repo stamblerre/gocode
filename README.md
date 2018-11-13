@@ -26,11 +26,11 @@ Also watch the [demo screencast](http://nosmileface.ru/images/gocode-demo.swf).
 
  2. Then you need to install gocode:
 
-    `go get -u github.com/mdempsky/gocode` (-u flag for "update")
+    `go get -u github.com/stamblerre/gocode` (-u flag for "update")
 
     Windows users should consider doing this instead:
 
-    `go get -u -ldflags -H=windowsgui github.com/mdempsky/gocode`
+    `go get -u -ldflags -H=windowsgui github.com/stamblerre/gocode`
 
     That way on the Windows OS gocode will be built as a GUI application and doing so solves hanging window issues with some of the editors.
 
@@ -80,7 +80,7 @@ In order to install vim scripts, you need to fulfill the following steps:
 
 Add the following line to your **.vimrc**:
 
-`Plugin 'mdempsky/gocode', {'rtp': 'vim/'}`
+`Plugin 'stamblerre/gocode', {'rtp': 'vim/'}`
 
 And then update your packages by running `:PluginInstall`.
 
@@ -88,7 +88,7 @@ And then update your packages by running `:PluginInstall`.
 
 Add the following line to your **.vimrc**:
 
-`Plug 'mdempsky/gocode', { 'rtp': 'vim', 'do': '~/.vim/plugged/gocode/vim/symlink.sh' }`
+`Plug 'stamblerre/gocode', { 'rtp': 'vim', 'do': '~/.vim/plugged/gocode/vim/symlink.sh' }`
 
 And then update your packages by running `:PlugInstall`.
 
@@ -105,7 +105,7 @@ Alternatively take a look at the vundle/pathogen friendly repo: https://github.c
 
 Add the following line to your **init.vim**:
 
-`Plugin 'mdempsky/gocode', {'rtp': 'nvim/'}`
+`Plugin 'stamblerre/gocode', {'rtp': 'nvim/'}`
 
 And then update your packages by running `:PluginInstall`.
 
@@ -113,7 +113,7 @@ And then update your packages by running `:PluginInstall`.
 
 Add the following line to your **init.vim**:
 
-`Plug 'mdempsky/gocode', { 'rtp': 'nvim', 'do': '~/.config/nvim/plugged/gocode/nvim/symlink.sh' }`
+`Plug 'stamblerre/gocode', { 'rtp': 'nvim', 'do': '~/.config/nvim/plugged/gocode/nvim/symlink.sh' }`
 
 And then update your packages by running `:PlugInstall`.
 
@@ -147,7 +147,7 @@ A plugin for Sublime Text 3 is provided in the `subl3` directory of this reposit
 
  1. Copy the plugin into your Sublime Text 3 `Packages` directory:
 
-		$ cp -r $GOPATH/src/github.com/mdempsky/gocode/subl3 ~/.config/sublime-text-3/Packages/
+		$ cp -r $GOPATH/src/github.com/stamblerre/gocode/subl3 ~/.config/sublime-text-3/Packages/
 
  2. Rename the plugin directory from `subl3` to `gocode`:
 
@@ -163,7 +163,7 @@ If something went wrong, the first thing you may want to do is manually start th
 
 `gocode -s -debug`
 
-Please, report bugs, feature suggestions and other rants to the [github issue tracker](http://github.com/mdempsky/gocode/issues) of this project.
+Please, report bugs, feature suggestions and other rants to the [github issue tracker](http://github.com/stamblerre/gocode/issues) of this project.
 
 ### Developing
 
