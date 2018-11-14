@@ -258,6 +258,7 @@ type cursorContext int
 
 const (
 	unknownContext cursorContext = iota
+	emptyResultsContext
 	selectContext
 	compositeLiteralContext
 )
@@ -270,7 +271,8 @@ func deduceCursorContext(file []byte, cursor int) (cursorContext, string, string
 
 	// See if we have a partial identifier to work with.
 	var partial string
-	switch tok := iter.token(); {
+	tok := iter.token()
+	switch {
 	case tok.tok.IsKeyword(), tok.tok == token.IDENT:
 		// we're '<whatever>.<ident>'
 		// parse <ident> as Partial and figure out decl
@@ -283,12 +285,14 @@ func deduceCursorContext(file []byte, cursor int) (cursorContext, string, string
 			return unknownContext, "", ""
 		}
 		partial = partial[:off]
-
 		if !iter.prev() {
 			return unknownContext, "", partial
 		}
 	}
-
+	switch tok.tok {
+	case token.FLOAT, token.INT, token.IMAG, token.CHAR, token.STRING:
+		return emptyResultsContext, "", partial
+	}
 	switch iter.token().tok {
 	case token.PERIOD:
 		return selectContext, iter.extractExpr(), partial
@@ -298,6 +302,5 @@ func deduceCursorContext(file []byte, cursor int) (cursorContext, string, string
 		// Let's try to find the struct type
 		return compositeLiteralContext, iter.extractLiteralType(), partial
 	}
-
 	return unknownContext, "", partial
 }

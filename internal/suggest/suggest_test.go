@@ -3,6 +3,7 @@ package suggest_test
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -13,24 +14,31 @@ import (
 	"github.com/stamblerre/gocode/internal/suggest"
 )
 
+var testDirFlag = flag.String("testdir", "", "specify a directory to run the test on")
+
 func TestRegress(t *testing.T) {
 	testDirs, err := filepath.Glob("testdata/test.*")
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	for _, testDir := range testDirs {
-		// Skip test.0011 for Go <= 1.11 because a method was added to reflect.Value.
-		// TODO(rstambler): Change this when Go 1.12 comes out.
-		if !strings.HasPrefix(runtime.Version(), "devel") && strings.HasSuffix(testDir, "test.0011") {
-				continue
-		}
-		testDir := testDir // capture
-		name := strings.TrimPrefix(testDir, "testdata/")
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			testRegress(t, testDir)
+	if *testDirFlag != "" {
+		t.Run(*testDirFlag, func(t *testing.T) {
+			testRegress(t, "testdata/test."+*testDirFlag)
 		})
+	} else {
+		for _, testDir := range testDirs {
+			// Skip test.0011 for Go <= 1.11 because a method was added to reflect.Value.
+			// TODO(rstambler): Change this when Go 1.12 comes out.
+			if !strings.HasPrefix(runtime.Version(), "devel") && strings.HasSuffix(testDir, "test.0011") {
+				continue
+			}
+			testDir := testDir // capture
+			name := strings.TrimPrefix(testDir, "testdata/")
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+				testRegress(t, testDir)
+			})
+		}
 	}
 }
 
@@ -80,7 +88,6 @@ func testRegress(t *testing.T, testDir string) {
 
 	var out bytes.Buffer
 	suggest.NiceFormat(&out, candidates, prefixLen)
-
 	want, _ := ioutil.ReadFile(filepath.Join(testDir, "out.expected"))
 	if got := out.Bytes(); !bytes.Equal(got, want) {
 		t.Errorf("%s:\nGot:\n%s\nWant:\n%s\n", testDir, got, want)

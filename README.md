@@ -1,5 +1,9 @@
 [![Build Status](https://travis-ci.org/stamblerre/gocode.svg?branch=master)](https://travis-ci.org/stamblerre/gocode)
 
+## github.com/mdempsky/gocode
+
+This version of gocode is a fork of the [original](https://github.com/nsf/gocode), which is no longer supported. This fork should work for all versions of Go >= 1.8. It only works for `$GOPATH` projects. For a version of gocode that works with Modules, please see [github.com/stamblerre/gocode](https://github.com/stamblerre/gocode).
+
 ## An autocompletion daemon for the Go programming language
 
 Gocode is a helper tool which is intended to be integrated with your source code editor, like vim, neovim and emacs. It provides several advanced capabilities, which currently includes:
@@ -33,6 +37,8 @@ Also watch the [demo screencast](http://nosmileface.ru/images/gocode-demo.swf).
     `go get -u -ldflags -H=windowsgui github.com/stamblerre/gocode`
 
     That way on the Windows OS gocode will be built as a GUI application and doing so solves hanging window issues with some of the editors.
+    
+    **Note: If you are updating your version of gocode, you will need to run `gocode close` to restart it.**
 
  3. Next steps are editor specific. See below.
 

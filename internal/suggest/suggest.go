@@ -17,10 +17,11 @@ import (
 )
 
 type Config struct {
-	Logf       func(fmt string, args ...interface{})
-	Context    *PackedContext
-	Builtin    bool
-	IgnoreCase bool
+	Logf               func(fmt string, args ...interface{})
+	Context            *PackedContext
+	Builtin            bool
+	IgnoreCase         bool
+	UnimportedPackages bool
 }
 
 // PackedContext is copied from go/packages.Config.
@@ -69,18 +70,20 @@ func (c *Config) Suggest(filename string, data []byte, cursor int) ([]Candidate,
 	}
 
 	switch ctx {
+	case emptyResultsContext:
+		// don't show results in certain cases
+		return nil, 0
+
 	case selectContext:
 		tv, _ := types.Eval(fset, pkg, pos, expr)
 		if lookdot.Walk(&tv, b.appendObject) {
 			break
 		}
-
 		_, obj := scope.LookupParent(expr, pos)
 		if pkgName, isPkg := obj.(*types.PkgName); isPkg {
 			c.packageCandidates(pkgName.Imported(), &b)
 			break
 		}
-
 		return nil, 0
 
 	case compositeLiteralContext:
@@ -91,9 +94,8 @@ func (c *Config) Suggest(filename string, data []byte, cursor int) ([]Candidate,
 				break
 			}
 		}
-
 		fallthrough
-	default:
+	case unknownContext:
 		c.scopeCandidates(scope, pos, &b)
 	}
 

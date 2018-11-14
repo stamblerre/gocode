@@ -8,10 +8,9 @@ import (
 	"net/rpc"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"time"
-
-	"runtime/debug"
 
 	"github.com/stamblerre/gocode/internal/suggest"
 )
@@ -127,8 +126,11 @@ func cmdAutoComplete(c *rpc.Client) {
 	// TODO(rstambler): Client can specify GOOS, GOARCH, etc.
 	// For now, assume same environment for server and client.
 	req.Context = &suggest.PackedContext{}
+	req.Source = *g_source
 	req.Builtin = *g_builtin
 	req.IgnoreCase = *g_ignore_case
+	req.UnimportedPackages = *g_unimported_packages
+	req.FallbackToSource = *g_fallback_to_source
 
 	var res AutoCompleteReply
 	var err error

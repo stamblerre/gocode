@@ -15,7 +15,7 @@ import (
 	"github.com/stamblerre/gocode/internal/suggest"
 )
 
-func doServer() {
+func doServer(_ bool) {
 	for _, v := range strings.Fields(suggest.GoosList) {
 		suggest.KnownOS[v] = true
 	}
@@ -54,16 +54,19 @@ func exitServer() {
 }
 
 type Server struct {
+	cache bool
 }
 
 type AutoCompleteRequest struct {
-	Filename   string
-	Data       []byte
-	Cursor     int
-	Context    *suggest.PackedContext
-	Source     bool
-	Builtin    bool
-	IgnoreCase bool
+	Filename           string
+	Data               []byte
+	Cursor             int
+	Context            *suggest.PackedContext
+	Source             bool
+	Builtin            bool
+	IgnoreCase         bool
+	UnimportedPackages bool
+	FallbackToSource   bool
 }
 
 type AutoCompleteReply struct {
@@ -95,9 +98,10 @@ func (s *Server) AutoComplete(req *AutoCompleteRequest, res *AutoCompleteReply) 
 	}
 	now := time.Now()
 	cfg := suggest.Config{
-		Context:    req.Context,
-		Builtin:    req.Builtin,
-		IgnoreCase: req.IgnoreCase,
+		Context:            req.Context,
+		Builtin:            req.Builtin,
+		IgnoreCase:         req.IgnoreCase,
+		UnimportedPackages: req.UnimportedPackages,
 	}
 	if *g_debug {
 		cfg.Logf = log.Printf
