@@ -102,6 +102,7 @@ func (s *Server) AutoComplete(req *AutoCompleteRequest, res *AutoCompleteReply) 
 		Builtin:            req.Builtin,
 		IgnoreCase:         req.IgnoreCase,
 		UnimportedPackages: req.UnimportedPackages,
+		Logf:               func(string, ...interface{}) {},
 	}
 	cfg.Logf = func(string, ...interface{}) {}
 	if *g_debug {

@@ -21,24 +21,34 @@ func TestRegress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	tmpDir, err := filepath.Abs("tmp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(tmpDir, 0775); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpDir)
 	if *testDirFlag != "" {
 		t.Run(*testDirFlag, func(t *testing.T) {
 			testRegress(t, "testdata/test."+*testDirFlag)
 		})
 	} else {
-		for _, testDir := range testDirs {
-			// Skip test.0011 for Go <= 1.11 because a method was added to reflect.Value.
-			// TODO(rstambler): Change this when Go 1.12 comes out.
-			if !strings.HasPrefix(runtime.Version(), "devel") && strings.HasSuffix(testDir, "test.0011") {
-				continue
+		t.Run("all", func(t *testing.T) {
+			for _, testDir := range testDirs {
+				// Skip test.0011 for Go <= 1.11 because a method was added to reflect.Value.
+				// TODO(rstambler): Change this when Go 1.12 comes out.
+				if !strings.HasPrefix(runtime.Version(), "devel") && strings.HasSuffix(testDir, "test.0011") {
+					continue
+				}
+				testDir := testDir // capture
+				name := strings.TrimPrefix(testDir, "testdata/")
+				t.Run(name, func(t *testing.T) {
+					t.Parallel()
+					testRegress(t, testDir)
+				})
 			}
-			testDir := testDir // capture
-			name := strings.TrimPrefix(testDir, "testdata/")
-			t.Run(name, func(t *testing.T) {
-				t.Parallel()
-				testRegress(t, testDir)
-			})
-		}
+		})
 	}
 }
 
@@ -48,27 +58,58 @@ func testRegress(t *testing.T, testDir string) {
 		t.Errorf("Abs failed: %v", err)
 		return
 	}
-	filename := filepath.Join(testDir, "test.go")
-	data, err := ioutil.ReadFile(filename + ".in")
+	tmpTestDir := strings.Replace(testDir, "testdata", "tmp", 1)
+	if err := os.MkdirAll(tmpTestDir, 0775); err != nil {
+		t.Errorf("MkdirAll failed: %v", err)
+		return
+	}
+	defer os.RemoveAll(tmpTestDir)
+
+	files, err := ioutil.ReadDir(testDir)
 	if err != nil {
-		t.Errorf("ReadFile failed: %v", err)
-		return
+		t.Error(err)
 	}
-	cursor := bytes.IndexByte(data, '@')
-	if cursor < 0 {
-		t.Errorf("Missing @")
-		return
+	var tmpTestFile string
+	var data []byte
+	var cursor int
+	for _, file := range files {
+		if strings.HasSuffix(file.Name(), ".go") {
+			// Copy any Go files to a temporary directory.
+			filename := filepath.Join(testDir, file.Name())
+			d, err := ioutil.ReadFile(filename)
+			if err != nil {
+				t.Errorf("ReadFile failed: %v", err)
+				return
+			}
+			tmpTestFile = filepath.Join(tmpTestDir, file.Name())
+			if err := ioutil.WriteFile(tmpTestFile, d, 0775); err != nil {
+				t.Errorf("WriteFile failed: %v", err)
+				return
+			}
+		} else if strings.HasSuffix(file.Name(), ".go.in") {
+			// Copy the test files to the temporary directory
+			filename := filepath.Join(testDir, file.Name())
+			var err error
+			data, err = ioutil.ReadFile(filename)
+			if err != nil {
+				t.Errorf("ReadFile failed: %v", err)
+				return
+			}
+			cursor = bytes.IndexByte(data, '@')
+			if cursor < 0 {
+				t.Errorf("Missing @")
+				return
+			}
+			data = append(data[:cursor], data[cursor+1:]...)
+			tmpTestFile = filepath.Join(tmpTestDir, strings.TrimSuffix(file.Name(), ".in"))
+			if err := ioutil.WriteFile(tmpTestFile, data, 0775); err != nil {
+				t.Errorf("WriteFile failed: %v", err)
+				return
+			}
+		}
 	}
-	data = append(data[:cursor], data[cursor+1:]...)
-
-	if err := ioutil.WriteFile(filename, data, 0775); err != nil {
-		t.Errorf("WriteFile failed: %v", err)
-		return
-	}
-	defer os.Remove(filename)
-
 	cfg := suggest.Config{
-		Logf:    t.Logf,
+		Logf:    func(string, ...interface{}) {},
 		Context: &suggest.PackedContext{},
 	}
 	if testing.Verbose() {
@@ -83,7 +124,7 @@ func testRegress(t *testing.T, testDir string) {
 		t.Errorf("Open failed: %v", err)
 		return
 	}
-	candidates, prefixLen := cfg.Suggest(filename, data, cursor)
+	candidates, prefixLen := cfg.Suggest(tmpTestFile, data, cursor)
 
 	var out bytes.Buffer
 	suggest.NiceFormat(&out, candidates, prefixLen)
@@ -92,13 +133,5 @@ func testRegress(t *testing.T, testDir string) {
 		t.Errorf("%s:\nGot:\n%s\nWant:\n%s\n", testDir, got, want)
 		return
 	}
-}
-
-func contains(haystack []string, needle string) bool {
-	for _, x := range haystack {
-		if needle == x {
-			return true
-		}
-	}
-	return false
+	return
 }
