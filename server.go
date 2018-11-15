@@ -3,6 +3,11 @@ package main
 import (
 	"bytes"
 	"fmt"
+<<<<<<< HEAD
+=======
+	"go/build"
+	"go/importer"
+>>>>>>> gocode: fix a bug with gbroot
 	"log"
 	"net"
 	"net/rpc"

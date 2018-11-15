@@ -55,6 +55,7 @@ func (c *Config) Suggest(filename string, data []byte, cursor int) ([]Candidate,
 
 	fset, pos, pkg, imports := c.analyzePackage(filename, data, cursor)
 	if pkg == nil {
+		c.Logf("no package found for %s", filename)
 		return nil, 0
 	}
 	scope := pkg.Scope().Innermost(pos)

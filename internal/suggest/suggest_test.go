@@ -112,6 +112,7 @@ func testRegress(t *testing.T, testDir string) {
 		Logf:    func(string, ...interface{}) {},
 		Context: &suggest.PackedContext{},
 	}
+	cfg.Logf = func(string, ...interface{}) {}
 	if testing.Verbose() {
 		cfg.Logf = t.Logf
 	}
