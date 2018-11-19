@@ -166,7 +166,7 @@ class Gocode(sublime_plugin.EventListener):
 		if self._prefix != prefix:
 			return
 
-		# Check if this query completions request is for the "lates" location
+		# Check if this query completions request is for the "latest" location
 		if self._location != location:
 			return
 
