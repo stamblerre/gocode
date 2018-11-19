@@ -138,9 +138,9 @@ class Gocode(sublime_plugin.EventListener):
 		:param view: currently active sublime view
 		:type view: sublime.View
 		:param prefix: string for completions
-    :type prefix: basestring
-    :param locations: offset from beginning
-    :type locations: int
+		:type prefix: basestring
+		:param locations: offset from beginning
+		:type locations: int
 		"""
 
 		self._running = True
@@ -186,18 +186,18 @@ class Gocode(sublime_plugin.EventListener):
 	def on_query_completions(self, view, prefix, locations):
 		"""Sublime autocomplete event handler.
 
-    Get completions depends on current cursor position and return
-    them as list of ('possible completion', 'completion type')
+		Get completions depends on current cursor position and return
+		them as list of ('possible completion', 'completion type')
 
-    :param view: currently active sublime view
-    :type view: sublime.View
-    :param prefix: string for completions
-    :type prefix: basestring
-    :param locations: offset from beginning
-    :type locations: int
+		:param view: currently active sublime view
+		:type view: sublime.View
+		:param prefix: string for completions
+		:type prefix: basestring
+		:param locations: offset from beginning
+		:type locations: int
 
-    :return: list of tuple(str, str)
-    """
+		:return: list of tuple(str, str)
+		"""
 
 		loc = locations[0]
 
@@ -218,8 +218,8 @@ class Gocode(sublime_plugin.EventListener):
 		self._prefix = prefix
 
 		sublime.set_timeout_async(
-      lambda: self.fetch_query_completions(view, prefix, loc)
-    )
+			lambda: self.fetch_query_completions(view, prefix, loc)
+		)
 
 		return []
 
