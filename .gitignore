@@ -10,3 +10,5 @@ listidents
 showcursor
 showsmap
 rename
+internal/cache
+internal/gbimporter
