@@ -29,7 +29,7 @@ func newTokenIterator(src []byte, cursor int) (tokenIterator, int) {
 	cursorPos := file.Pos(cursor)
 
 	var s scanner.Scanner
-	s.Init(file, src, nil, 0)
+	s.Init(file, src, nil, scanner.ScanComments)
 	tokens := make([]tokenItem, 0, 1000)
 	lastPos := token.NoPos
 	for {
@@ -290,7 +290,7 @@ func deduceCursorContext(file []byte, cursor int) (cursorContext, string, string
 		}
 	}
 	switch tok.tok {
-	case token.FLOAT, token.INT, token.IMAG, token.CHAR, token.STRING:
+	case token.CHAR, token.COMMENT, token.FLOAT, token.IMAG, token.INT, token.STRING:
 		return emptyResultsContext, "", partial
 	}
 	switch iter.token().tok {
