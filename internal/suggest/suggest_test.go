@@ -87,7 +87,7 @@ func testRegress(t *testing.T, testDir string) {
 				return
 			}
 		} else if strings.HasSuffix(file.Name(), ".go.in") {
-			// Copy the test files to the temporary directory
+			// Copy the test files to the temporary directory and save information.
 			filename := filepath.Join(testDir, file.Name())
 			var err error
 			data, err = ioutil.ReadFile(filename)
