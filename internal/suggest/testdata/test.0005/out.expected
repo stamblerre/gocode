@@ -1,1 +1,6 @@
-Nothing to complete.
+Found 5 candidates:
+  func A() invalid type
+  func B() invalid type
+  package localos 
+  type Tester struct
+  var test invalid type
