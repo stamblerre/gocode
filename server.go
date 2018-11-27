@@ -103,6 +103,7 @@ func (s *Server) AutoComplete(req *AutoCompleteRequest, res *AutoCompleteReply) 
 		IgnoreCase:         req.IgnoreCase,
 		UnimportedPackages: req.UnimportedPackages,
 	}
+	cfg.Logf = func(string, ...interface{}) {}
 	if *g_debug {
 		cfg.Logf = log.Printf
 	}

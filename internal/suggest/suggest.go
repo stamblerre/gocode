@@ -166,11 +166,15 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 			return file, nil
 		},
 	}
-	pkgs, _ := packages.Load(cfg, fmt.Sprintf("file=%v", filename))
+	pkgs, err := packages.Load(cfg, fmt.Sprintf("file=%v", filename))
 	if len(pkgs) <= 0 { // ignore errors
+		c.Logf("no package found for %s: %v", filename, err)
 		return nil, token.NoPos, nil, nil
 	}
 	pkg := pkgs[0]
+	for _, err := range pkg.Errors {
+		c.Logf("error in package %s: %s:%s", pkg.PkgPath, err.Pos, err.Msg)
+	}
 
 	return pkg.Fset, pos, pkg.Types, fileAST.Imports
 }

@@ -48,7 +48,6 @@ func testRegress(t *testing.T, testDir string) {
 		t.Errorf("Abs failed: %v", err)
 		return
 	}
-
 	filename := filepath.Join(testDir, "test.go")
 	data, err := ioutil.ReadFile(filename + ".in")
 	if err != nil {
