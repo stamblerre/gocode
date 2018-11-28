@@ -125,7 +125,9 @@ func cmdAutoComplete(c *rpc.Client) {
 	req.Filename, req.Data, req.Cursor = prepareFilenameDataCursor()
 	// TODO(rstambler): Client can specify GOOS, GOARCH, etc.
 	// For now, assume same environment for server and client.
-	req.Context = &suggest.PackedContext{}
+	req.Context = &suggest.PackedContext{
+		Dir: filepath.Dir(req.Filename),
+	}
 	req.Source = *g_source
 	req.Builtin = *g_builtin
 	req.IgnoreCase = *g_ignore_case
