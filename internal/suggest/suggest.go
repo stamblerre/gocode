@@ -130,6 +130,9 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 		Dir:        c.Context.Dir,
 		BuildFlags: append(c.Context.BuildFlags, fmt.Sprintf("-tags=%s", tags)),
 		Tests:      true,
+		Overlay: map[string][]byte{
+			filename: data,
+		},
 		ParseFile: func(fset *token.FileSet, parseFilename string, _ []byte) (*ast.File, error) {
 			var src interface{}
 			var filePos token.Pos
