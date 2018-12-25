@@ -2,20 +2,21 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"net"
-	"net/rpc"
 	"os"
-	"os/signal"
 	"runtime/debug"
 	"strings"
 	"time"
 
+	"github.com/keegancsmith/rpc"
+
 	"github.com/stamblerre/gocode/internal/suggest"
 )
 
-func doServer(_ bool) {
+func doServer(ctx context.Context, _ bool) {
 	for _, v := range strings.Fields(suggest.GoosList) {
 		suggest.KnownOS[v] = true
 	}
@@ -33,10 +34,8 @@ func doServer(_ bool) {
 		log.Fatal(err)
 	}
 
-	sigs := make(chan os.Signal)
-	signal.Notify(sigs, os.Interrupt)
 	go func() {
-		<-sigs
+		<-ctx.Done()
 		exitServer()
 	}()
 
@@ -74,7 +73,7 @@ type AutoCompleteReply struct {
 	Len        int
 }
 
-func (s *Server) AutoComplete(req *AutoCompleteRequest, res *AutoCompleteReply) error {
+func (s *Server) AutoComplete(ctx context.Context, req *AutoCompleteRequest, res *AutoCompleteReply) error {
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Printf("panic: %s\n\n", err)
@@ -98,6 +97,7 @@ func (s *Server) AutoComplete(req *AutoCompleteRequest, res *AutoCompleteReply) 
 	}
 	now := time.Now()
 	cfg := suggest.Config{
+		RequestContext:     ctx,
 		Context:            req.Context,
 		Builtin:            req.Builtin,
 		IgnoreCase:         req.IgnoreCase,
@@ -130,7 +130,7 @@ func (s *Server) AutoComplete(req *AutoCompleteRequest, res *AutoCompleteReply) 
 type ExitRequest struct{}
 type ExitReply struct{}
 
-func (s *Server) Exit(req *ExitRequest, res *ExitReply) error {
+func (s *Server) Exit(ctx context.Context, req *ExitRequest, res *ExitReply) error {
 	go func() {
 		time.Sleep(time.Second)
 		exitServer()

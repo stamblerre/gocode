@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 )
 
@@ -45,13 +47,30 @@ func usage() {
 			"  exit                               terminate the gocode daemon\n")
 }
 
+// cliContext returns context that is cancelled with os.Interrupt
+func cliContext() (context.Context, func()) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	sigs := make(chan os.Signal)
+	signal.Notify(sigs, os.Interrupt)
+	go func() {
+		<-sigs
+		cancel()
+	}()
+
+	return ctx, cancel
+}
+
 func main() {
 	flag.Usage = usage
 	flag.Parse()
 
+	ctx, cancel := cliContext()
+	defer cancel()
+
 	if *g_is_server {
-		doServer(*g_cache)
+		doServer(ctx, *g_cache)
 	} else {
-		doClient()
+		doClient(ctx)
 	}
 }

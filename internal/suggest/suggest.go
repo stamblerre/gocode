@@ -2,6 +2,7 @@ package suggest
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -17,6 +18,8 @@ import (
 )
 
 type Config struct {
+	RequestContext context.Context
+
 	Logf               func(fmt string, args ...interface{})
 	Context            *PackedContext
 	Builtin            bool
@@ -125,6 +128,8 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 	var posMu sync.Mutex // guards pos and fileAST in ParseFile
 
 	cfg := &packages.Config{
+		Context: c.RequestContext,
+
 		Mode:       packages.LoadSyntax,
 		Env:        c.Context.Env,
 		Dir:        c.Context.Dir,
