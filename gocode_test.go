@@ -2,17 +2,17 @@ package main_test
 
 import (
 	"context"
-	"fmt"
 	"os/exec"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"golang.org/x/sync/errgroup"
 )
 
-func TestCancellation(t *testing.T) {
+func TestCancellation_Panic(t *testing.T) {
+	// checks that neither server nor client panic on cancellation
+
 	const testServerAddress = "127.0.0.1:38383"
 
 	var buffer buffer
@@ -31,7 +31,7 @@ func TestCancellation(t *testing.T) {
 	serverCtx, serverCancel := context.WithCancel(context.Background())
 
 	// start the server
-	cmd := exec.CommandContext(serverCtx, gocode, "-s", "-debug",
+	cmd := exec.CommandContext(serverCtx, gocode, "-s", // "-debug",
 		"-sock", "tcp",
 		"-addr", testServerAddress,
 	)
@@ -55,13 +55,17 @@ func TestCancellation(t *testing.T) {
 	// cancel server when any of the clients fails
 	serverCancel()
 
-	if err := cmd.Wait(); err != nil {
-		t.Fatal(err)
-	}
+	_ = cmd.Wait()
 
+	if strings.Contains(string(buffer.text), "panic") || strings.Contains(string(buffer.text), "PANIC") {
+		t.Fail()
+	}
 }
 
 func runClients(t *testing.T, serverAddr string) {
+	const N = 10
+	const testFile = "gocode_test.go"
+
 	var buffer buffer
 	defer func() {
 		if t.Failed() {
@@ -70,23 +74,25 @@ func runClients(t *testing.T, serverAddr string) {
 	}()
 
 	clientCtx, clientCancel := context.WithCancel(context.Background())
-	var clientGroup errgroup.Group
+
+	var wg sync.WaitGroup
+	wg.Add(N)
 
 	// start bunch of clients
-	for i := 0; i < 10; i++ {
+	for i := 0; i < N; i++ {
 		offset := i * 5
-		clientGroup.Go(func() error {
+		go func() {
+			defer wg.Done()
+
 			cmd := exec.CommandContext(clientCtx, "gocode",
 				"-sock", "tcp",
 				"-addr", serverAddr,
-				"autocomplete", "gocode_test.go", strconv.Itoa(offset))
+				"-in", testFile,
+				"autocomplete", testFile, strconv.Itoa(offset))
+
 			cmd.Stderr, cmd.Stdout = buffer.prefixed("client | "), buffer.prefixed("client | ")
-			err := cmd.Run()
-			if err != nil {
-				return fmt.Errorf("client offset=%d: %v", offset, err)
-			}
-			return nil
-		})
+			_ = cmd.Run()
+		}()
 	}
 
 	// wait for a bit
@@ -95,9 +101,10 @@ func runClients(t *testing.T, serverAddr string) {
 	// cancel all clients
 	clientCancel()
 
-	err := clientGroup.Wait()
-	if err != nil {
-		t.Fatal(err)
+	wg.Wait()
+
+	if strings.Contains(string(buffer.text), "panic") || strings.Contains(string(buffer.text), "PANIC") {
+		t.Fail()
 	}
 }
 
