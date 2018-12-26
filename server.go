@@ -39,7 +39,7 @@ func doServer(ctx context.Context, _ bool) {
 		exitServer()
 	}()
 
-	if err = rpc.Register(&Server{}); err != nil {
+	if err = rpc.Register(&Server{ctx, false}); err != nil {
 		log.Fatal(err)
 	}
 	rpc.Accept(lis)
@@ -53,7 +53,8 @@ func exitServer() {
 }
 
 type Server struct {
-	cache bool
+	context context.Context
+	cache   bool
 }
 
 type AutoCompleteRequest struct {
@@ -74,6 +75,7 @@ type AutoCompleteReply struct {
 }
 
 func (s *Server) AutoComplete(ctx context.Context, req *AutoCompleteRequest, res *AutoCompleteReply) error {
+	// ensure panics don't kill server
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Printf("panic: %s\n\n", err)
@@ -84,6 +86,18 @@ func (s *Server) AutoComplete(ctx context.Context, req *AutoCompleteRequest, res
 			}
 		}
 	}()
+
+	// cancel any pending request when server is shuting down
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-s.context.Done():
+			cancel()
+		}
+	}()
+
 	if *g_debug {
 		var buf bytes.Buffer
 		log.Printf("Got autocompletion request for '%s'\n", req.Filename)
