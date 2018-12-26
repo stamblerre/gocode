@@ -102,13 +102,16 @@ func (s *Server) AutoComplete(ctx context.Context, req *AutoCompleteRequest, res
 		var buf bytes.Buffer
 		log.Printf("Got autocompletion request for '%s'\n", req.Filename)
 		log.Printf("Cursor at: %d\n", req.Cursor)
-		buf.WriteString("-------------------------------------------------------\n")
-		buf.Write(req.Data[:req.Cursor])
-		buf.WriteString("#")
-		buf.Write(req.Data[req.Cursor:])
-		log.Print(buf.String())
-		log.Println("-------------------------------------------------------")
+		if len(req.Data) > req.Cursor {
+			buf.WriteString("-------------------------------------------------------\n")
+			buf.Write(req.Data[:req.Cursor])
+			buf.WriteString("#")
+			buf.Write(req.Data[req.Cursor:])
+			log.Print(buf.String())
+			log.Println("-------------------------------------------------------")
+		}
 	}
+
 	now := time.Now()
 	cfg := suggest.Config{
 		RequestContext:     ctx,

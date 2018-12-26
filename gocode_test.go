@@ -74,7 +74,7 @@ func runClients(t *testing.T, serverAddr string) {
 
 	// start bunch of clients
 	for i := 0; i < 10; i++ {
-		offset := i * 10
+		offset := i * 5
 		clientGroup.Go(func() error {
 			cmd := exec.CommandContext(clientCtx, "gocode",
 				"-sock", "tcp",
@@ -90,7 +90,7 @@ func runClients(t *testing.T, serverAddr string) {
 	}
 
 	// wait for a bit
-	time.Sleep(150 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	// cancel all clients
 	clientCancel()
