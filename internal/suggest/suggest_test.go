@@ -2,6 +2,7 @@ package suggest_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"io/ioutil"
@@ -112,10 +113,10 @@ func testRegress(t *testing.T, testDir string) {
 		Logf:    func(string, ...interface{}) {},
 		Context: &suggest.PackedContext{},
 	}
-	cfg.Logf = func(string, ...interface{}) {}
 	if testing.Verbose() {
 		cfg.Logf = t.Logf
 	}
+
 	if cfgJSON, err := os.Open(filepath.Join(testDir, "config.json")); err == nil {
 		if err := json.NewDecoder(cfgJSON).Decode(&cfg); err != nil {
 			t.Errorf("Decode failed: %v", err)
@@ -135,4 +136,26 @@ func testRegress(t *testing.T, testDir string) {
 		return
 	}
 	return
+}
+
+func TestCancellation(t *testing.T) {
+	// sanity check for cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+
+	cfg := suggest.Config{
+		RequestContext: ctx,
+		Logf:           func(string, ...interface{}) {},
+		Context:        &suggest.PackedContext{},
+	}
+	if testing.Verbose() {
+		cfg.Logf = t.Logf
+	}
+
+	data, err := ioutil.ReadFile("suggest_test.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cancel()
+	_, _ = cfg.Suggest("suggest_test.go", data, 100)
 }
