@@ -2,6 +2,7 @@ package main_test
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"time"
 )
 
+// use `go build . && go test .` to run this
 func TestCancellation_Panic(t *testing.T) {
 	// checks that neither server nor client panic on cancellation
 
@@ -81,6 +83,7 @@ func runClients(t *testing.T, serverAddr string) {
 	// start bunch of clients
 	for i := 0; i < N; i++ {
 		offset := i * 5
+		stdout := buffer.prefixed(fmt.Sprintf("client %d |", i))
 		go func() {
 			defer wg.Done()
 
@@ -90,7 +93,7 @@ func runClients(t *testing.T, serverAddr string) {
 				"-in", testFile,
 				"autocomplete", testFile, strconv.Itoa(offset))
 
-			cmd.Stderr, cmd.Stdout = buffer.prefixed("client | "), buffer.prefixed("client | ")
+			cmd.Stderr, cmd.Stdout = stdout, stdout
 			_ = cmd.Run()
 		}()
 	}
