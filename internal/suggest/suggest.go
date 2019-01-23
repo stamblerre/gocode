@@ -123,12 +123,17 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 		tags = suffix
 	}
 
+	ctx := c.RequestContext
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	var fileAST *ast.File
 	var pos token.Pos
 	var posMu sync.Mutex // guards pos and fileAST in ParseFile
 
 	cfg := &packages.Config{
-		Context: c.RequestContext,
+		Context: ctx,
 
 		Mode:       packages.LoadSyntax,
 		Env:        c.Context.Env,
@@ -139,6 +144,10 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 			filename: data,
 		},
 		ParseFile: func(fset *token.FileSet, parseFilename string, _ []byte) (*ast.File, error) {
+			if ctx.Err() == context.Canceled {
+				return nil, context.Canceled
+			}
+
 			var src interface{}
 			var filePos token.Pos
 			mode := parser.DeclarationErrors
@@ -185,6 +194,9 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 		c.Logf("error in package %s: %s:%s", pkg.PkgPath, err.Pos, err.Msg)
 	}
 
+	if fileAST == nil {
+		return nil, token.NoPos, nil, nil
+	}
 	return pkg.Fset, pos, pkg.Types, fileAST.Imports
 }
 
