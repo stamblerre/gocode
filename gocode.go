@@ -53,6 +53,7 @@ func cliContext() (context.Context, func()) {
 
 	sigs := make(chan os.Signal)
 	signal.Notify(sigs, os.Interrupt)
+	signal.Notify(sigs, os.Kill)
 	go func() {
 		<-sigs
 		cancel()
