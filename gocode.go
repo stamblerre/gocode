@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"syscall"
 )
 
 var (
@@ -54,6 +55,7 @@ func cliContext() (context.Context, func()) {
 	sigs := make(chan os.Signal)
 	signal.Notify(sigs, os.Interrupt)
 	signal.Notify(sigs, os.Kill)
+	signal.Notify(sigs, syscall.SIGTERM)
 	go func() {
 		<-sigs
 		cancel()
