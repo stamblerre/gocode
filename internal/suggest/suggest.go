@@ -144,10 +144,6 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 			filename: data,
 		},
 		ParseFile: func(fset *token.FileSet, parseFilename string, _ []byte) (*ast.File, error) {
-			if ctx.Err() == context.Canceled {
-				return nil, context.Canceled
-			}
-
 			var src interface{}
 			var filePos token.Pos
 			mode := parser.DeclarationErrors
