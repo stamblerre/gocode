@@ -53,10 +53,11 @@ func main() {
 	flag.Parse()
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	sigs := make(chan os.Signal)
 	signal.Notify(sigs, os.Interrupt, os.Kill, syscall.SIGTERM)
-	defer func() {
+	go func() {
 		<-sigs
 		cancel()
 	}()
