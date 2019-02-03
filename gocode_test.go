@@ -3,7 +3,11 @@ package main_test
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -11,10 +15,33 @@ import (
 	"time"
 )
 
-// use `go build . && go test .` to run this
-func TestCancellation_Panic(t *testing.T) {
-	// checks that neither server nor client panic on cancellation
+func compile(t testing.TB, pkg string) (executable string, cleanup func()) {
+	t.Helper()
 
+	dir, err := ioutil.TempDir("", "gocode")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cleanup = func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Error(err)
+		}
+	}
+
+	executable = filepath.Join(dir, path.Base(pkg)+".exe")
+	out, err := exec.Command("go", "build", "-o", executable, pkg).CombinedOutput()
+	if err != nil {
+		cleanup()
+		t.Error(string(out))
+		t.Fatal(err)
+	}
+
+	return executable, cleanup
+}
+
+// TestCancellation_Panic checks that neither client nor server panic on cancellation.
+func TestCancellation_Panic(t *testing.T) {
 	const testServerAddress = "127.0.0.1:38383"
 
 	var buffer buffer
@@ -24,11 +51,8 @@ func TestCancellation_Panic(t *testing.T) {
 		}
 	}()
 
-	gocode, err := exec.LookPath("gocode")
-	if err != nil {
-		t.Skip(err)
-	}
-	t.Log("running test with ", gocode)
+	gocode, cleanup := compile(t, "github.com/stamblerre/gocode")
+	defer cleanup()
 
 	serverCtx, serverCancel := context.WithCancel(context.Background())
 
@@ -50,7 +74,7 @@ func TestCancellation_Panic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	runClients(t, testServerAddress)
+	runClients(t, gocode, testServerAddress)
 
 	time.Sleep(time.Second)
 
@@ -59,12 +83,12 @@ func TestCancellation_Panic(t *testing.T) {
 
 	_ = cmd.Wait()
 
-	if strings.Contains(string(buffer.text), "panic") || strings.Contains(string(buffer.text), "PANIC") {
+	if strings.Contains(strings.ToLower(string(buffer.text)), "panic") {
 		t.Fail()
 	}
 }
 
-func runClients(t *testing.T, serverAddr string) {
+func runClients(t *testing.T, gocode, serverAddr string) {
 	const N = 10
 	const testFile = "gocode_test.go"
 
@@ -75,7 +99,7 @@ func runClients(t *testing.T, serverAddr string) {
 		}
 	}()
 
-	clientCtx, clientCancel := context.WithCancel(context.Background())
+	clientCtx, cancelClient := context.WithCancel(context.Background())
 
 	var wg sync.WaitGroup
 	wg.Add(N)
@@ -87,7 +111,7 @@ func runClients(t *testing.T, serverAddr string) {
 		go func() {
 			defer wg.Done()
 
-			cmd := exec.CommandContext(clientCtx, "gocode",
+			cmd := exec.CommandContext(clientCtx, gocode,
 				"-sock", "tcp",
 				"-addr", serverAddr,
 				"-in", testFile,
@@ -98,11 +122,8 @@ func runClients(t *testing.T, serverAddr string) {
 		}()
 	}
 
-	// wait for a bit
 	time.Sleep(300 * time.Millisecond)
-
-	// cancel all clients
-	clientCancel()
+	cancelClient()
 
 	wg.Wait()
 
