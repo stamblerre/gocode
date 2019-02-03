@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/keegancsmith/rpc"
-
 	"github.com/stamblerre/gocode/internal/suggest"
 )
 
@@ -75,7 +74,6 @@ type AutoCompleteReply struct {
 }
 
 func (s *Server) AutoComplete(ctx context.Context, req *AutoCompleteRequest, res *AutoCompleteReply) error {
-	// ensure panics don't kill server
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Printf("panic: %s\n\n", err)
@@ -102,7 +100,7 @@ func (s *Server) AutoComplete(ctx context.Context, req *AutoCompleteRequest, res
 		var buf bytes.Buffer
 		log.Printf("Got autocompletion request for '%s'\n", req.Filename)
 		log.Printf("Cursor at: %d\n", req.Cursor)
-		if len(req.Data) > req.Cursor {
+		if req.Cursor <= len(req.Data) {
 			buf.WriteString("-------------------------------------------------------\n")
 			buf.Write(req.Data[:req.Cursor])
 			buf.WriteString("#")
