@@ -1,21 +1,23 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/rpc"
 	"os"
 	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"time"
 
+	"github.com/keegancsmith/rpc"
+
 	"github.com/stamblerre/gocode/internal/suggest"
 )
 
-func doClient() {
+func doClient(ctx context.Context) {
 	// Client is a short-lived program.
 	// Disable GC to make it faster
 	debug.SetGCPercent(-1)
@@ -75,9 +77,9 @@ func doClient() {
 
 	switch command {
 	case "autocomplete":
-		cmdAutoComplete(client)
+		cmdAutoComplete(ctx, client)
 	case "exit":
-		cmdExit(client)
+		cmdExit(ctx, client)
 	}
 }
 
@@ -120,7 +122,7 @@ func tryToConnect(network, address string) (*rpc.Client, error) {
 	}
 }
 
-func cmdAutoComplete(c *rpc.Client) {
+func cmdAutoComplete(ctx context.Context, c *rpc.Client) {
 	var req AutoCompleteRequest
 	req.Filename, req.Data, req.Cursor = prepareFilenameDataCursor()
 	// TODO(rstambler): Client can specify GOOS, GOARCH, etc.
@@ -138,9 +140,9 @@ func cmdAutoComplete(c *rpc.Client) {
 	var err error
 	if c == nil {
 		s := Server{}
-		err = s.AutoComplete(&req, &res)
+		err = s.AutoComplete(ctx, &req, &res)
 	} else {
-		err = c.Call("Server.AutoComplete", &req, &res)
+		err = c.Call(ctx, "Server.AutoComplete", &req, &res)
 	}
 	if err != nil {
 		log.Fatal(err)
@@ -153,13 +155,13 @@ func cmdAutoComplete(c *rpc.Client) {
 	fmt(os.Stdout, res.Candidates, res.Len)
 }
 
-func cmdExit(c *rpc.Client) {
+func cmdExit(ctx context.Context, c *rpc.Client) {
 	if c == nil {
 		return
 	}
 	var req ExitRequest
 	var res ExitReply
-	if err := c.Call("Server.Exit", &req, &res); err != nil {
+	if err := c.Call(ctx, "Server.Exit", &req, &res); err != nil {
 		log.Fatal(err)
 	}
 }

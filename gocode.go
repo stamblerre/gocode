@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 )
 
 var (
@@ -49,9 +52,19 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigs := make(chan os.Signal)
+	signal.Notify(sigs, os.Interrupt, os.Kill, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		cancel()
+	}()
+
 	if *g_is_server {
-		doServer(*g_cache)
+		doServer(ctx, *g_cache)
 	} else {
-		doClient()
+		doClient(ctx)
 	}
 }
