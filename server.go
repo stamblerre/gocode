@@ -91,6 +91,7 @@ func (s *Server) AutoComplete(ctx context.Context, req *AutoCompleteRequest, res
 	go func() {
 		select {
 		case <-ctx.Done():
+			cancel()
 		case <-s.context.Done():
 			cancel()
 		}
