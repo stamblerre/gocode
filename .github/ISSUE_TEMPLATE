@@ -18,3 +18,7 @@ Try to complete once again from your editor, and paste the output printed by goc
 Please note here if you are using `-source`, `-builtin`, `-ignore-case`, `-unimported-packages`, or `-fallback-to-source`.
 
 ### What editor are using?
+
+  ---
+labels: enhancement
+  ---
