@@ -145,7 +145,6 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 		},
 		ParseFile: func(fset *token.FileSet, parseFilename string, _ []byte) (*ast.File, error) {
 			var src interface{}
-			var filePos token.Pos
 			mode := parser.DeclarationErrors
 			if sameFile(filename, parseFilename) {
 				// If we're in trailing white space at the end of a scope,
@@ -158,21 +157,30 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 			if file == nil {
 				return nil, err
 			}
+			var cursorPos token.Pos
 			if sameFile(filename, parseFilename) {
-				filePos = fset.File(file.Pos()).Pos(cursor)
-				if filePos == token.NoPos {
+				filePos := file.Pos()
+				if !filePos.IsValid() {
+					return nil, fmt.Errorf("invalid position: %v, %v", file.Name.Name, filePos)
+				}
+				tok := fset.File(filePos)
+				if tok == nil {
+					return nil, fmt.Errorf("no token.File for file %s", file.Name.Name)
+				}
+				cursorPos = tok.Pos(cursor)
+				if !cursorPos.IsValid() || cursorPos == token.NoPos {
 					return nil, fmt.Errorf("no position for cursor in %s", parseFilename)
 				}
 				posMu.Lock()
 				if pos == token.NoPos {
-					pos = filePos
+					pos = cursorPos
 				}
 				fileAST = file
 				posMu.Unlock()
 			}
 			for _, decl := range file.Decls {
 				if fd, ok := decl.(*ast.FuncDecl); ok {
-					if filePos == token.NoPos || (filePos < fd.Pos() || filePos >= fd.End()) {
+					if cursorPos == token.NoPos || (cursorPos < fd.Pos() || cursorPos >= fd.End()) {
 						fd.Body = nil
 					}
 				}
@@ -189,7 +197,6 @@ func (c *Config) analyzePackage(filename string, data []byte, cursor int) (*toke
 	for _, err := range pkg.Errors {
 		c.Logf("error in package %s: %s:%s", pkg.PkgPath, err.Pos, err.Msg)
 	}
-
 	if fileAST == nil {
 		return nil, token.NoPos, nil, nil
 	}
