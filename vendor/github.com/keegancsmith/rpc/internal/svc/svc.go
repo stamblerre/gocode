@@ -8,20 +8,16 @@ import (
 // Pending manages a map of all pending requests to a rpc.Service for a
 // connection (an rpc.ServerCodec).
 type Pending struct {
-	mu     sync.Mutex
-	m      map[uint64]context.CancelFunc // seq -> cancel
-	parent context.Context
+	mu sync.Mutex
+	m  map[uint64]context.CancelFunc // seq -> cancel
 }
 
-func NewPending(parent context.Context) *Pending {
-	return &Pending{
-		m:      make(map[uint64]context.CancelFunc),
-		parent: parent,
-	}
+func NewPending() *Pending {
+	return &Pending{m: make(map[uint64]context.CancelFunc)}
 }
 
 func (s *Pending) Start(seq uint64) context.Context {
-	ctx, cancel := context.WithCancel(s.parent)
+	ctx, cancel := context.WithCancel(context.Background())
 	s.mu.Lock()
 	// we assume seq is not already in map. If not, the client is broken.
 	s.m[seq] = cancel

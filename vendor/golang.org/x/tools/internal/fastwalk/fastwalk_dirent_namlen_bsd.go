@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package internal
+// +build darwin freebsd openbsd netbsd
 
-// EnableTrace indicates whether stack information should be recorded in errors.
-var EnableTrace = true
+package fastwalk
+
+import "syscall"
+
+func direntNamlen(dirent *syscall.Dirent) uint64 {
+	return uint64(dirent.Namlen)
+}

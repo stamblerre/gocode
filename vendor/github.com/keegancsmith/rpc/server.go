@@ -144,7 +144,6 @@ import (
 	"context"
 	"encoding/gob"
 	"errors"
-	"go/token"
 	"io"
 	"log"
 	"net"
@@ -152,6 +151,8 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/keegancsmith/rpc/internal/svc"
 )
@@ -220,6 +221,12 @@ func NewServer() *Server {
 // DefaultServer is the default instance of *Server.
 var DefaultServer = NewServer()
 
+// Is this an exported - upper case - name?
+func isExported(name string) bool {
+	rune, _ := utf8.DecodeRuneInString(name)
+	return unicode.IsUpper(rune)
+}
+
 // Is this type exported or a builtin?
 func isExportedOrBuiltinType(t reflect.Type) bool {
 	for t.Kind() == reflect.Ptr {
@@ -227,7 +234,7 @@ func isExportedOrBuiltinType(t reflect.Type) bool {
 	}
 	// PkgPath will be non-empty even for an exported type,
 	// so we need to check the type name as well.
-	return token.IsExported(t.Name()) || t.PkgPath() == ""
+	return isExported(t.Name()) || t.PkgPath() == ""
 }
 
 // Register publishes in the server the set of methods of the
@@ -263,7 +270,7 @@ func (server *Server) register(rcvr interface{}, name string, useName bool) erro
 		log.Print(s)
 		return errors.New(s)
 	}
-	if !token.IsExported(sname) && !useName {
+	if !isExported(sname) && !useName {
 		s := "rpc.Register: type " + sname + " is not exported"
 		log.Print(s)
 		return errors.New(s)
@@ -488,9 +495,7 @@ func (server *Server) ServeConn(conn io.ReadWriteCloser) {
 // decode requests and encode responses.
 func (server *Server) ServeCodec(codec ServerCodec) {
 	sending := new(sync.Mutex)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	pending := svc.NewPending(ctx)
+	pending := svc.NewPending()
 	wg := new(sync.WaitGroup)
 	for {
 		service, mtype, req, argv, replyv, keepReading, err := server.readRequest(codec)
@@ -520,17 +525,8 @@ func (server *Server) ServeCodec(codec ServerCodec) {
 // ServeRequest is like ServeCodec but synchronously serves a single request.
 // It does not close the codec upon completion.
 func (server *Server) ServeRequest(codec ServerCodec) error {
-	return server.ServeRequestContext(context.Background(), codec)
-}
-
-// ServeRequest is like ServeCodec but synchronously serves a single request.
-// It does not close the codec upon completion.
-//
-// Cancelling the context given here will propagate cancellation to the context
-// of the called function.
-func (server *Server) ServeRequestContext(ctx context.Context, codec ServerCodec) error {
 	sending := new(sync.Mutex)
-	pending := svc.NewPending(ctx)
+	pending := svc.NewPending()
 	service, mtype, req, argv, replyv, keepReading, err := server.readRequest(codec)
 	if err != nil {
 		if !keepReading {
@@ -724,16 +720,7 @@ func ServeCodec(codec ServerCodec) {
 // ServeRequest is like ServeCodec but synchronously serves a single request.
 // It does not close the codec upon completion.
 func ServeRequest(codec ServerCodec) error {
-	return ServeRequestContext(context.Background(), codec)
-}
-
-// ServeRequest is like ServeCodec but synchronously serves a single request.
-// It does not close the codec upon completion.
-//
-// Cancelling the context given here will propagate cancellation to the context
-// of the called function.
-func ServeRequestContext(ctx context.Context, codec ServerCodec) error {
-	return DefaultServer.ServeRequestContext(ctx, codec)
+	return DefaultServer.ServeRequest(codec)
 }
 
 // Accept accepts connections on the listener and serves requests
