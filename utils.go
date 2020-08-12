@@ -7,10 +7,7 @@ import (
 
 func fileExists(filename string) bool {
 	_, err := os.Stat(filename)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func runeToByteOffset(s []byte, offset_c int) (offset_b int) {

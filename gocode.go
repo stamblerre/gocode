@@ -56,7 +56,7 @@ func main() {
 	defer cancel()
 
 	sigs := make(chan os.Signal)
-	signal.Notify(sigs, os.Interrupt, os.Kill, syscall.SIGTERM)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigs
 		cancel()
